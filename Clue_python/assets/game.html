@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Maldición de los Moore</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --dark: #0a0806;
+    --dark2: #12100e;
+    --red: #8b1a1a;
+    --text: #d4c5a9;
+    --text-dim: #8a7a65;
+  }
+
+  body {
+    background: var(--dark);
+    font-family: 'IM Fell English', serif;
+    color: var(--text);
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    cursor: default;
+  }
+
+  /* ── SCREEN SYSTEM ── */
+  .screen {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+  }
+  .screen.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .screen.visible { opacity: 1; }
+
+  /* ── BACKGROUND IMAGE ── */
+  .bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+
+  /* ── CINEMATIC OVERLAY ── */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.5) 100%);
+    z-index: 1;
+  }
+  .overlay-dark {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1;
+  }
+
+  /* ── CONTENT LAYER ── */
+  .content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 6vh;
+  }
+
+  /* ── BUTTONS ── */
+  .btn-img {
+    cursor: pointer;
+    transition: filter 0.25s, transform 0.2s;
+    display: block;
+    max-width: 340px;
+    width: 28vw;
+    min-width: 200px;
+  }
+  .btn-img:hover {
+    filter: brightness(1.35) drop-shadow(0 0 12px rgba(201,168,76,0.7));
+    transform: scale(1.04);
+  }
+  .btn-img:active { transform: scale(0.97); }
+
+  .btn-row {
+    display: flex;
+    gap: 2vw;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── ACTIONS COUNTER (nota blanca) ── */
+  #actions-counter {
+    position: fixed;
+    top: 2.5vh;
+    right: 2.5vw;
+    z-index: 999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+  }
+  #actions-counter img {
+    width: 130px;
+    opacity: 0.95;
+  }
+  #actions-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'IM Fell English', serif;
+    font-size: 0.78rem;
+    color: #2a1a0a;
+    text-align: center;
+    line-height: 1.3;
+    width: 90px;
+    font-style: italic;
+  }
+
+  /* ── TRANSITION VEIL ── */
+  #veil {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+  }
+  #veil.fade-in { opacity: 1; pointer-events: all; }
+
+  /* ── INTRO SCREENS ── */
+  #screen-portada .content { justify-content: flex-end; }
+
+  /* ── INVESTIGATION HUB ── */
+  #screen-hub {
+    background: #0a0806;
+  }
+  #screen-hub .content {
+    justify-content: flex-end;
+    padding-bottom: 5vh;
+    gap: 2vh;
+  }
+
+  /* ── MAP SCREEN ── */
+  #screen-mapa .content {
+    justify-content: flex-end;
+    padding-bottom: 4vh;
+  }
+
+  /* Map room hotspots */
+  .map-hotspot {
+    position: absolute;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: box-shadow 0.25s, background 0.25s;
+    z-index: 3;
+  }
+  .map-hotspot:hover {
+    box-shadow: 0 0 18px 4px rgba(201,168,76,0.6);
+    background: rgba(201,168,76,0.12);
+  }
+
+  /* ── INVESTIGATION BOARD ── */
+  #screen-investigacion .content {
+    justify-content: flex-end;
+    padding-bottom: 4vh;
+  }
+
+  /* ── SUSPECTS BOARD ── */
+  #screen-sospechosos {
+    background: #080606;
+  }
+  .suspect-hotspot {
+    position: absolute;
+    cursor: pointer;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+    z-index: 3;
+  }
+  .suspect-hotspot:hover {
+    border-color: rgba(201,168,76,0.5);
+    box-shadow: 0 0 15px rgba(201,168,76,0.4);
+  }
+
+  /* ── WEAPONS SCREEN ── */
+  #screen-armas {
+    background: #080605;
+  }
+  .weapon-card {
+    cursor: pointer;
+    transition: filter 0.25s, transform 0.2s;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid transparent;
+  }
+  .weapon-card:hover {
+    filter: brightness(1.2);
+    transform: scale(1.03);
+    border-color: rgba(201,168,76,0.5);
+    box-shadow: 0 0 20px rgba(201,168,76,0.3);
+  }
+
+  /* ── PROFILE / ROOM / WEAPON DISPLAY ── */
+  #screen-detail .content {
+    justify-content: flex-end;
+    padding-bottom: 5vh;
+  }
+
+  /* ── ACCUSATION BOARD ── */
+  #screen-acusacion {
+    background: #09070a;
+  }
+
+  .accuse-option {
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    transition: border-color 0.25s, box-shadow 0.25s, filter 0.25s;
+    position: relative;
+  }
+  .accuse-option:hover {
+    filter: brightness(1.2);
+    border-color: rgba(201,168,76,0.5);
+    box-shadow: 0 0 16px rgba(201,168,76,0.35);
+  }
+  .accuse-option.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 22px rgba(201,168,76,0.8), inset 0 0 10px rgba(201,168,76,0.15);
+    filter: brightness(1.25);
+  }
+
+  .accuse-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .accuse-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .accuse-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Confirm button */
+  #btn-confirm-accuse {
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--gold);
+    padding: 10px 32px;
+    cursor: pointer;
+    transition: background 0.25s, box-shadow 0.25s;
+    text-transform: uppercase;
+  }
+  #btn-confirm-accuse:hover {
+    background: rgba(201,168,76,0.15);
+    box-shadow: 0 0 20px rgba(201,168,76,0.4);
+  }
+  #btn-confirm-accuse:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ── RESULT SCREENS ── */
+  #screen-result .content {
+    justify-content: flex-end;
+    padding-bottom: 5vh;
+  }
+
+  /* ── WRONG ACCUSATION DISPLAY ── */
+  #screen-wrong .content {
+    justify-content: flex-end;
+    padding-bottom: 5vh;
+    gap: 3vh;
+  }
+
+  /* Nota equivocacion overlay */
+  .nota-equivocacion {
+    position: absolute;
+    top: 3vh;
+    left: 3vw;
+    width: 18vw;
+    min-width: 140px;
+    max-width: 220px;
+    z-index: 10;
+    pointer-events: none;
+    animation: fadeInNota 0.6s ease forwards;
+  }
+  @keyframes fadeInNota {
+    from { opacity: 0; transform: rotate(-3deg) scale(0.9); }
+    to   { opacity: 1; transform: rotate(-2deg) scale(1); }
+  }
+
+  /* ── RAIN PARTICLES ── */
+  #rain-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0.18;
+  }
+
+  /* ── BACK BUTTON fixed position ── */
+  .btn-back-fixed {
+    position: absolute;
+    bottom: 3vh;
+    left: 3vw;
+    z-index: 10;
+    cursor: pointer;
+    width: 120px;
+    transition: filter 0.25s, transform 0.2s;
+  }
+  .btn-back-fixed:hover {
+    filter: brightness(1.4) drop-shadow(0 0 10px rgba(201,168,76,0.6));
+    transform: scale(1.05);
+  }
+
+  .btn-continue-fixed {
+    position: absolute;
+    bottom: 3vh;
+    right: 3vw;
+    z-index: 10;
+    cursor: pointer;
+    width: 200px;
+    transition: filter 0.25s, transform 0.2s;
+  }
+  .btn-continue-fixed:hover {
+    filter: brightness(1.35) drop-shadow(0 0 12px rgba(201,168,76,0.7));
+    transform: scale(1.04);
+  }
+
+  /* Weapons grid */
+  #weapons-grid {
+    display: flex;
+    gap: 2vw;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5vw;
+    flex-wrap: wrap;
+  }
+  #weapons-grid .weapon-card img {
+    height: 42vh;
+    width: auto;
+    display: block;
+  }
+
+  /* ── ACUSACION overlay on full bg ── */
+  #accuse-ui {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    padding: 2vh 3vw 3vh;
+    background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 70%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5vh;
+  }
+
+  .accuse-option img {
+    height: 10vh;
+    width: auto;
+    display: block;
+    border-radius: 4px;
+  }
+  .accuse-option.suspect-opt img {
+    height: 11vh;
+  }
+  .accuse-option.room-opt img {
+    height: 9vh;
+  }
+
+  #accuse-sections {
+    display: flex;
+    gap: 3vw;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* ── WRONG partial screens ── */
+  #screen-wrong-suspect { background: #080505; }
+  #screen-wrong-weapon  { background: #080505; }
+  #screen-wrong-room    { background: #080505; }
+
+  /* ── GENERAL FADE TEXT ── */
+  .fade-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.8rem, 1.5vw, 1.1rem);
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    text-align: center;
+    text-shadow: 0 0 20px rgba(201,168,76,0.5);
+  }
+
+</style>
+</head>
+<body>
+
+<!-- Rain canvas -->
+<canvas id="rain-canvas"></canvas>
+
+<!-- Transition veil -->
+<div id="veil"></div>
+
+<!-- Actions counter -->
+<div id="actions-counter">
+  <img src="009_nota_blanca.png" alt="">
+  <div id="actions-text">Acciones<br>restantes:<br><strong id="actions-num">5</strong></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 1: PORTADA
+═══════════════════════════════════════════ -->
+<div id="screen-portada" class="screen">
+  <img class="bg" src="000_intro_portada.png" alt="">
+  <div class="content">
+    <img class="btn-img" src="009_boton_continuar.png" alt="Iniciar" id="btn-portada-start">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 2: OBJETIVO
+═══════════════════════════════════════════ -->
+<div id="screen-objetivo" class="screen">
+  <img class="bg" src="000_intro_objetivo.png" alt="">
+  <div class="content">
+    <img class="btn-img" src="009_boton_continuar.png" alt="Continuar" id="btn-objetivo-next">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 3: REGLAS
+═══════════════════════════════════════════ -->
+<div id="screen-reglas" class="screen">
+  <img class="bg" src="000_intro_reglas.png" alt="">
+  <div class="content">
+    <img class="btn-img" src="009_boton_continuar.png" alt="Continuar" id="btn-reglas-next">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 4: VICTIMA (caso presentado)
+═══════════════════════════════════════════ -->
+<div id="screen-victima" class="screen">
+  <img class="bg" id="bg-victima" src="" alt="">
+  <div class="overlay"></div>
+  <div class="content">
+    <img class="btn-img" src="009_boton_investigacion.png" alt="Investigar" id="btn-victima-hub">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 5: HUB INVESTIGACIÓN (tablero principal)
+═══════════════════════════════════════════ -->
+<div id="screen-hub" class="screen">
+  <img class="bg" src="003_tablero_principal.png" alt="">
+  <div class="content">
+    <img class="btn-img" src="009_boton_investigacion.png" alt="Investigar" id="btn-hub-open">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 6: TABLERO DE INVESTIGACIÓN
+═══════════════════════════════════════════ -->
+<div id="screen-investigacion" class="screen">
+  <img class="bg" src="003_tablero_investigacion.png" alt="">
+  <div class="content" style="justify-content:flex-start;padding-top:0;position:relative;">
+    <!-- Clickable zones over the 3 cards -->
+    <!-- MAPA -->
+    <div id="inv-mapa" style="position:absolute;left:8%;top:38%;width:22%;height:42%;cursor:pointer;z-index:3;border-radius:8px;transition:box-shadow 0.25s;" 
+         onmouseover="this.style.boxShadow='0 0 20px 4px rgba(201,168,76,0.6)'" 
+         onmouseout="this.style.boxShadow='none'"></div>
+    <!-- ARMAS -->
+    <div id="inv-armas" style="position:absolute;left:38%;top:38%;width:24%;height:42%;cursor:pointer;z-index:3;border-radius:8px;transition:box-shadow 0.25s;"
+         onmouseover="this.style.boxShadow='0 0 20px 4px rgba(201,168,76,0.6)'"
+         onmouseout="this.style.boxShadow='none'"></div>
+    <!-- SOSPECHOSOS -->
+    <div id="inv-sospechosos" style="position:absolute;left:65%;top:38%;width:24%;height:42%;cursor:pointer;z-index:3;border-radius:8px;transition:box-shadow 0.25s;"
+         onmouseover="this.style.boxShadow='0 0 20px 4px rgba(201,168,76,0.6)'"
+         onmouseout="this.style.boxShadow='none'"></div>
+    <!-- Back button -->
+    <img class="btn-back-fixed" src="009_boton_bolver.png" alt="Volver" id="btn-inv-back">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 7: MAPA
+═══════════════════════════════════════════ -->
+<div id="screen-mapa" class="screen">
+  <img class="bg" src="003_mapa_mansion.png" alt="">
+  <div style="position:absolute;inset:0;z-index:2;">
+    <!-- Room hotspots positioned over map image -->
+    <div class="map-hotspot" id="room-biblioteca"   style="left:24%;top:28%;width:18%;height:22%;" title="Biblioteca"></div>
+    <div class="map-hotspot" id="room-estudio-up"   style="left:55%;top:28%;width:18%;height:22%;" title="Estudio"></div>
+    <div class="map-hotspot" id="room-invernadero"  style="left:3%;top:32%;width:16%;height:28%;" title="Invernadero"></div>
+    <div class="map-hotspot" id="room-estudio-low"  style="left:22%;top:60%;width:18%;height:22%;" title="Estudio"></div>
+    <div class="map-hotspot" id="room-cocina"       style="left:55%;top:55%;width:18%;height:24%;" title="Cocina"></div>
+    <div class="map-hotspot" id="room-cava"         style="left:55%;top:75%;width:18%;height:18%;" title="Cava"></div>
+  </div>
+  <div class="content">
+    <img class="btn-back-fixed" src="009_boton_bolver.png" alt="Volver" id="btn-mapa-back">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 8: ARMAS
+═══════════════════════════════════════════ -->
+<div id="screen-armas" class="screen">
+  <div class="overlay-dark"></div>
+  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:3vh;">
+    <p class="fade-title" style="margin-bottom:1vh;">¿Qué arma quieres analizar?</p>
+    <div id="weapons-grid">
+      <div class="weapon-card" data-weapon="cuchillo"><img src="010_arma_cuchillo.png" alt="Cuchillo"></div>
+      <div class="weapon-card" data-weapon="veneno"><img src="010_arma_veneno.png" alt="Veneno"></div>
+      <div class="weapon-card" data-weapon="cuerda"><img src="010_arma_cuerda.png" alt="Cuerda"></div>
+      <div class="weapon-card" data-weapon="pistola"><img src="010_arma_pistola.png" alt="Pistola"></div>
+      <div class="weapon-card" data-weapon="copa"><img src="010_arma_copa.png" alt="Copa"></div>
+    </div>
+    <img class="btn-back-fixed" src="009_boton_bolver.png" alt="Volver" id="btn-armas-back" style="position:relative;bottom:auto;left:auto;margin-top:1vh;">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 9: SOSPECHOSOS BOARD
+═══════════════════════════════════════════ -->
+<div id="screen-sospechosos" class="screen">
+  <img class="bg" src="003_tablero_principal.png" alt="" id="bg-sospechosos">
+  <div style="position:absolute;inset:0;z-index:2;">
+    <!-- Suspect hotspots — positioned over the board image characters -->
+    <div class="suspect-hotspot" id="susp-abuelo"  style="left:22%;top:20%;width:12%;height:35%;" title="El Abuelo"></div>
+    <div class="suspect-hotspot" id="susp-hijo"    style="left:37%;top:20%;width:12%;height:35%;" title="El Hijo"></div>
+    <div class="suspect-hotspot" id="susp-nuera"   style="left:52%;top:20%;width:12%;height:35%;" title="La Nuera"></div>
+    <div class="suspect-hotspot" id="susp-tio"     style="left:22%;top:57%;width:12%;height:35%;" title="El Tío"></div>
+    <div class="suspect-hotspot" id="susp-abogado" style="left:37%;top:57%;width:12%;height:35%;" title="El Abogado"></div>
+    <div class="suspect-hotspot" id="susp-nieta"   style="left:52%;top:57%;width:12%;height:35%;" title="La Nieta"></div>
+  </div>
+  <div class="content">
+    <img class="btn-back-fixed" src="009_boton_bolver.png" alt="Volver" id="btn-susp-back">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 10: DETAIL (room / weapon / profile)
+═══════════════════════════════════════════ -->
+<div id="screen-detail" class="screen">
+  <img class="bg" id="bg-detail" src="" alt="">
+  <div class="overlay"></div>
+  <!-- Nota equivocacion if wrong room/weapon -->
+  <img id="nota-equivocacion-detail" class="nota-equivocacion" src="012_nota_equivocacion.png" alt="" style="display:none;">
+  <div class="content">
+    <img class="btn-continue-fixed" src="009_boton_continuar.png" alt="Continuar" id="btn-detail-continue">
+    <img class="btn-back-fixed" src="009_boton_bolver.png" alt="Volver" id="btn-detail-back">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 11: ACUSACIÓN FINAL
+═══════════════════════════════════════════ -->
+<div id="screen-acusacion" class="screen">
+  <img class="bg" src="003_Tablero_acusaciones.png" alt="">
+  <div id="accuse-ui">
+    <div id="accuse-sections">
+      <!-- SUSPECTS -->
+      <div class="accuse-section">
+        <span class="accuse-label">🧍 Sospechoso</span>
+        <div class="accuse-row" id="accuse-suspects"></div>
+      </div>
+      <!-- WEAPONS -->
+      <div class="accuse-section">
+        <span class="accuse-label">🗡️ Arma</span>
+        <div class="accuse-row" id="accuse-weapons"></div>
+      </div>
+      <!-- ROOMS -->
+      <div class="accuse-section">
+        <span class="accuse-label">🏠 Lugar</span>
+        <div class="accuse-row" id="accuse-rooms"></div>
+      </div>
+    </div>
+    <button id="btn-confirm-accuse" disabled>CONFIRMAR ACUSACIÓN</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 12: WRONG SUSPECT
+═══════════════════════════════════════════ -->
+<div id="screen-wrong-suspect" class="screen">
+  <img class="bg" id="bg-wrong-suspect" src="" alt="">
+  <div class="overlay"></div>
+  <div class="content">
+    <img class="btn-continue-fixed" src="009_boton_continuar.png" alt="Continuar" id="btn-wrong-susp-next">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 13: WRONG WEAPON
+═══════════════════════════════════════════ -->
+<div id="screen-wrong-weapon" class="screen">
+  <img class="bg" id="bg-wrong-weapon" src="" alt="">
+  <img class="nota-equivocacion" src="012_nota_equivocacion.png" alt="" style="z-index:5;">
+  <div class="content">
+    <img class="btn-continue-fixed" src="009_boton_continuar.png" alt="Continuar" id="btn-wrong-wpn-next">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 14: WRONG ROOM
+═══════════════════════════════════════════ -->
+<div id="screen-wrong-room" class="screen">
+  <img class="bg" id="bg-wrong-room" src="" alt="">
+  <img class="nota-equivocacion" src="012_nota_equivocacion.png" alt="" style="z-index:5;">
+  <div class="content">
+    <img class="btn-continue-fixed" src="009_boton_continuar.png" alt="Continuar" id="btn-wrong-room-next">
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCREEN 15: RESULT (win/lose)
+═══════════════════════════════════════════ -->
+<div id="screen-result" class="screen">
+  <img class="bg" id="bg-result" src="" alt="">
+  <div class="overlay"></div>
+  <div class="content">
+    <img class="btn-img" src="009_boton_continuar.png" alt="Jugar de nuevo" id="btn-result-restart" style="bottom:5vh;position:absolute;">
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// GAME DATA
+// ═══════════════════════════════════════════════════════
+
+const CASES = [
+  {
+    id: 1,
+    title: "Herencia Silenciosa",
+    killer:  "hijo",
+    victim:  "abuelo",
+    weapon:  "veneno",
+    room:    "cava",
+    winImage: null // no hay ganaste_abuelo, el abuelo es victima aqui
+  },
+  {
+    id: 2,
+    title: "Decisiones que Pesan",
+    killer:  "abogado",
+    victim:  "hijo",
+    weapon:  "cuchillo",
+    room:    "estudio",
+    winImage: "011_ganaste_caso_hijo.png"
+  },
+  {
+    id: 3,
+    title: "El Peso del Pasado",
+    killer:  "tio",
+    victim:  "nuera",
+    weapon:  "cuerda",
+    room:    "invernadero",
+    winImage: "011_ganaste_caso_nuera.png"
+  },
+  {
+    id: 4,
+    title: "Ruido en la Oscuridad",
+    killer:  "nieta",
+    victim:  "tio",
+    weapon:  "pistola",
+    room:    "biblioteca",
+    winImage: "011_ganaste_caso_tio.png"
+  },
+  {
+    id: 5,
+    title: "Lo que Queda en la Mesa",
+    killer:  "nuera",
+    victim:  "abogado",
+    weapon:  "copa",
+    room:    "cocina",
+    winImage: "011_ganaste_caso_abogado.png"
+  }
+];
+
+const SUSPECTS = ["abuelo","hijo","nuera","tio","abogado","nieta"];
+const WEAPONS  = ["cuchillo","veneno","cuerda","pistola","copa"];
+const ROOMS    = ["biblioteca","estudio","invernadero","cava","cocina"];
+
+const WEAPON_IMGS = {
+  cuchillo: "010_arma_cuchillo.png",
+  veneno:   "010_arma_veneno.png",
+  cuerda:   "010_arma_cuerda.png",
+  pistola:  "010_arma_pistola.png",
+  copa:     "010_arma_copa.png"
+};
+
+const ROOM_IMGS = {
+  biblioteca:  "002_biblioteca.png",
+  estudio:     "002_estudio.png",
+  invernadero: "002_invernadero.png",
+  cava:        "002_cava.png",
+  cocina:      "002_cocina.png"
+};
+
+const ROOM_IMGS_DEAD = {
+  biblioteca:  "002_biblioteca_muerto.png",
+  estudio:     "002_estudio_muerto.png",
+  invernadero: "002_invernadero_muerto.png",
+  cava:        "002_cava_muerto.png",
+  cocina:      "002_cocina_muerto.png"
+};
+
+const SUSPECT_IMGS_PROFILE = {
+  abuelo:  "004_perfil_abuelo.png",
+  hijo:    "004_perfil_hijo.png",
+  nuera:   "004_perfil_nuera.png",
+  tio:     "004_perfil_tio.png",
+  abogado: "004_perfil_abogado.png",
+  nieta:   "004_perfil_nieta.png"
+};
+
+const SUSPECT_IMGS_DESCARTADO = {
+  abuelo:  "006_descartado_abuela.png",
+  hijo:    "006_descartado_hijo.png",
+  nuera:   "006_descartado_nuera.png",
+  tio:     "006_descartado_tio.png",
+  abogado: "006_descartado_abogado.png",
+  nieta:   "006_descartado_nieta.png"
+};
+
+const SUSPECT_IMGS_SOSPECHOSO = {
+  abuelo:  "007_sospechoso_abuelo.png",
+  hijo:    "007_sospechoso_hijo.png",
+  nuera:   "007_sospechoso_nuera.png",
+  tio:     "007_sospechoso_tio.png",
+  abogado: "007_sospechoso_abogado.png",
+  nieta:   "007_sospechoso_nieta.png"
+};
+
+const SUSPECT_IMGS_CULPABLE = {
+  abuelo:  "008_culpable_abuelo.png",
+  hijo:    "008_culpable_hijo.png",
+  nuera:   "008_culpable_nuera.png",
+  tio:     "008_culpable_tio.png",
+  abogado: "008_culpable_abogado.png",
+  nieta:   "008_culpable_nieta.png"
+};
+
+const VICTIM_IMGS = {
+  abuelo:  "005_victima_abuelo.png",
+  hijo:    "005_victima_hijo.png",
+  nuera:   "005_victima_nuera.png",
+  tio:     "005_victima_tio.png",
+  abogado: "005_victima_abogado.png",
+  nieta:   "005_victima_nieta.png"
+};
+
+const WIN_IMGS = {
+  abogado: "011_ganaste_caso_abogado.png",
+  hijo:    "011_ganaste_caso_hijo.png",
+  nieta:   "011_ganaste_caso_nieta.png",
+  nuera:   "011_ganaste_caso_nuera.png",
+  tio:     "011_ganaste_caso_tio.png"
+};
+
+// ═══════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════
+
+let state = {
+  currentCase: null,
+  actionsLeft: 5,
+  round: 1,           // 1 or 2
+  investigatedRooms: [],
+  fromScreen: null,   // where detail came from
+  detailAfter: null,  // screen to go after detail
+
+  // accusation
+  selectedSuspect: null,
+  selectedWeapon:  null,
+  selectedRoom:    null,
+
+  // wrong flow step
+  wrongStep: 0        // 0=suspect, 1=weapon, 2=room
+};
+
+// ═══════════════════════════════════════════════════════
+// SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════════════
+
+let currentScreen = null;
+
+function showScreen(id, callback) {
+  const veil = document.getElementById('veil');
+  veil.classList.add('fade-in');
+  setTimeout(() => {
+    if (currentScreen) {
+      const prev = document.getElementById(currentScreen);
+      prev.classList.remove('visible');
+      setTimeout(() => prev.classList.remove('active'), 100);
+    }
+    const next = document.getElementById(id);
+    next.classList.add('active');
+    setTimeout(() => {
+      next.classList.add('visible');
+      veil.classList.remove('fade-in');
+      currentScreen = id;
+      if (callback) callback();
+    }, 100);
+  }, 500);
+}
+
+// ═══════════════════════════════════════════════════════
+// ACTIONS COUNTER
+// ═══════════════════════════════════════════════════════
+
+function updateActionsCounter() {
+  const counter = document.getElementById('actions-counter');
+  const num = document.getElementById('actions-num');
+  num.textContent = state.actionsLeft;
+  if (state.actionsLeft > 0 && ['screen-hub','screen-investigacion','screen-mapa','screen-armas','screen-sospechosos'].includes(currentScreen)) {
+    counter.style.display = 'flex';
+  } else {
+    counter.style.display = 'none';
+  }
+}
+
+function showCounter() {
+  document.getElementById('actions-counter').style.display = 'flex';
+  document.getElementById('actions-num').textContent = state.actionsLeft;
+}
+function hideCounter() {
+  document.getElementById('actions-counter').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════
+// USE ACTION
+// ═══════════════════════════════════════════════════════
+
+function useAction() {
+  state.actionsLeft--;
+  document.getElementById('actions-num').textContent = state.actionsLeft;
+  if (state.actionsLeft <= 0) {
+    // Go to accusation after viewing detail
+    state.detailAfter = 'accusation';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT GAME
+// ═══════════════════════════════════════════════════════
+
+function initGame() {
+  // Pick random case
+  state.currentCase = CASES[Math.floor(Math.random() * CASES.length)];
+  state.actionsLeft = 5;
+  state.round = 1;
+  state.investigatedRooms = [];
+  state.selectedSuspect = null;
+  state.selectedWeapon  = null;
+  state.selectedRoom    = null;
+
+  // Set victim image
+  document.getElementById('bg-victima').src = VICTIM_IMGS[state.currentCase.victim];
+  showScreen('screen-portada');
+}
+
+// ═══════════════════════════════════════════════════════
+// SHOW DETAIL SCREEN
+// ═══════════════════════════════════════════════════════
+
+function showDetail(imgSrc, fromScreen, showNota=false) {
+  document.getElementById('bg-detail').src = imgSrc;
+  const nota = document.getElementById('nota-equivocacion-detail');
+  nota.style.display = showNota ? 'block' : 'none';
+  state.fromScreen = fromScreen;
+
+  // show counter in detail if actions remain
+  showScreen('screen-detail', () => {
+    if (state.actionsLeft > 0) showCounter();
+    else hideCounter();
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// INVESTIGATE ROOM
+// ═══════════════════════════════════════════════════════
+
+function investigateRoom(roomKey) {
+  useAction();
+  const isDeadRoom = roomKey === state.currentCase.room;
+  const img = isDeadRoom ? ROOM_IMGS_DEAD[roomKey] : ROOM_IMGS[roomKey];
+  showDetail(img, 'screen-mapa');
+}
+
+// ═══════════════════════════════════════════════════════
+// INVESTIGATE WEAPON
+// ═══════════════════════════════════════════════════════
+
+function investigateWeapon(weaponKey) {
+  useAction();
+  showDetail(WEAPON_IMGS[weaponKey], 'screen-armas');
+}
+
+// ═══════════════════════════════════════════════════════
+// INVESTIGATE SUSPECT
+// ═══════════════════════════════════════════════════════
+
+function investigateSuspect(suspectKey) {
+  useAction();
+  // Show sospechoso image for non-killer, profile for general, sospechoso if round 2
+  let img;
+  if (state.round === 2) {
+    img = SUSPECT_IMGS_SOSPECHOSO[suspectKey] || SUSPECT_IMGS_PROFILE[suspectKey];
+  } else {
+    img = SUSPECT_IMGS_PROFILE[suspectKey];
+  }
+  showDetail(img, 'screen-sospechosos');
+}
+
+// ═══════════════════════════════════════════════════════
+// ACCUSATION SETUP
+// ═══════════════════════════════════════════════════════
+
+function setupAccusation() {
+  hideCounter();
+  state.selectedSuspect = null;
+  state.selectedWeapon  = null;
+  state.selectedRoom    = null;
+
+  // Build suspects
+  const suspRow = document.getElementById('accuse-suspects');
+  suspRow.innerHTML = '';
+  SUSPECTS.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'accuse-option suspect-opt';
+    div.dataset.value = s;
+    const img = document.createElement('img');
+    img.src = SUSPECT_IMGS_PROFILE[s];
+    img.title = s;
+    div.appendChild(img);
+    div.addEventListener('click', () => selectAccuse('suspect', s, div));
+    suspRow.appendChild(div);
+  });
+
+  // Build weapons
+  const wpnRow = document.getElementById('accuse-weapons');
+  wpnRow.innerHTML = '';
+  WEAPONS.forEach(w => {
+    const div = document.createElement('div');
+    div.className = 'accuse-option weapon-opt';
+    div.dataset.value = w;
+    const img = document.createElement('img');
+    img.src = WEAPON_IMGS[w];
+    img.title = w;
+    div.appendChild(img);
+    div.addEventListener('click', () => selectAccuse('weapon', w, div));
+    wpnRow.appendChild(div);
+  });
+
+  // Build rooms
+  const roomRow = document.getElementById('accuse-rooms');
+  roomRow.innerHTML = '';
+  ROOMS.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'accuse-option room-opt';
+    div.dataset.value = r;
+    const img = document.createElement('img');
+    img.src = ROOM_IMGS[r];
+    img.title = r;
+    div.appendChild(img);
+    div.addEventListener('click', () => selectAccuse('room', r, div));
+    roomRow.appendChild(div);
+  });
+
+  document.getElementById('btn-confirm-accuse').disabled = true;
+  showScreen('screen-acusacion');
+}
+
+function selectAccuse(type, value, el) {
+  const rowMap = { suspect: 'accuse-suspects', weapon: 'accuse-weapons', room: 'accuse-rooms' };
+  // Clear selection in row
+  document.getElementById(rowMap[type]).querySelectorAll('.accuse-option').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+  if (type === 'suspect') state.selectedSuspect = value;
+  if (type === 'weapon')  state.selectedWeapon  = value;
+  if (type === 'room')    state.selectedRoom    = value;
+
+  // Enable confirm if all selected
+  if (state.selectedSuspect && state.selectedWeapon && state.selectedRoom) {
+    document.getElementById('btn-confirm-accuse').disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIRM ACCUSATION
+// ═══════════════════════════════════════════════════════
+
+function confirmAccusation() {
+  const c = state.currentCase;
+  const suspectOk = state.selectedSuspect === c.killer;
+  const weaponOk  = state.selectedWeapon  === c.weapon;
+  const roomOk    = state.selectedRoom    === c.room;
+
+  if (suspectOk && weaponOk && roomOk) {
+    // WIN
+    const winImg = WIN_IMGS[c.victim] || '011_ganaste_caso_hijo.png';
+    document.getElementById('bg-result').src = winImg;
+    hideCounter();
+    showScreen('screen-result');
+  } else {
+    // WRONG — show error sequence
+    state.wrongStep = 0;
+    showWrongSequence(suspectOk, weaponOk, roomOk);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// WRONG ACCUSATION SEQUENCE
+// ═══════════════════════════════════════════════════════
+
+let wrongResults = {};
+
+function showWrongSequence(suspectOk, weaponOk, roomOk) {
+  wrongResults = { suspectOk, weaponOk, roomOk };
+  // Step 1: show suspect result
+  const suspImg = suspectOk
+    ? SUSPECT_IMGS_CULPABLE[state.selectedSuspect]
+    : SUSPECT_IMGS_DESCARTADO[state.selectedSuspect];
+  document.getElementById('bg-wrong-suspect').src = suspImg;
+  showScreen('screen-wrong-suspect');
+}
+
+// ═══════════════════════════════════════════════════════
+// EVENT LISTENERS
+// ═══════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Portada → Objetivo
+  document.getElementById('btn-portada-start').addEventListener('click', () => {
+    showScreen('screen-objetivo');
+  });
+
+  // Objetivo → Reglas
+  document.getElementById('btn-objetivo-next').addEventListener('click', () => {
+    showScreen('screen-reglas');
+  });
+
+  // Reglas → Victima
+  document.getElementById('btn-reglas-next').addEventListener('click', () => {
+    showScreen('screen-victima');
+  });
+
+  // Victima → Hub
+  document.getElementById('btn-victima-hub').addEventListener('click', () => {
+    showScreen('screen-hub', () => showCounter());
+  });
+
+  // Hub → Investigación board
+  document.getElementById('btn-hub-open').addEventListener('click', () => {
+    showScreen('screen-investigacion', () => showCounter());
+  });
+
+  // Inv board → Mapa
+  document.getElementById('inv-mapa').addEventListener('click', () => {
+    showScreen('screen-mapa', () => showCounter());
+  });
+
+  // Inv board → Armas
+  document.getElementById('inv-armas').addEventListener('click', () => {
+    showScreen('screen-armas', () => showCounter());
+  });
+
+  // Inv board → Sospechosos
+  document.getElementById('inv-sospechosos').addEventListener('click', () => {
+    // Use the sospechosos board image
+    document.getElementById('bg-sospechosos').src = '003_tablero_principal.png';
+    showScreen('screen-sospechosos', () => showCounter());
+  });
+
+  // Inv back → Hub
+  document.getElementById('btn-inv-back').addEventListener('click', () => {
+    showScreen('screen-hub', () => showCounter());
+  });
+
+  // Mapa back → Inv board
+  document.getElementById('btn-mapa-back').addEventListener('click', () => {
+    showScreen('screen-investigacion', () => showCounter());
+  });
+
+  // Room hotspots
+  const roomMap = {
+    'room-biblioteca':  'biblioteca',
+    'room-estudio-up':  'estudio',
+    'room-estudio-low': 'estudio',
+    'room-invernadero': 'invernadero',
+    'room-cocina':      'cocina',
+    'room-cava':        'cava'
+  };
+  Object.entries(roomMap).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => investigateRoom(key));
+  });
+
+  // Armas back → Inv board
+  document.getElementById('btn-armas-back').addEventListener('click', () => {
+    showScreen('screen-investigacion', () => showCounter());
+  });
+
+  // Weapon cards
+  document.querySelectorAll('.weapon-card').forEach(card => {
+    card.addEventListener('click', () => investigateWeapon(card.dataset.weapon));
+  });
+
+  // Suspect hotspots
+  const suspMap = {
+    'susp-abuelo':  'abuelo',
+    'susp-hijo':    'hijo',
+    'susp-nuera':   'nuera',
+    'susp-tio':     'tio',
+    'susp-abogado': 'abogado',
+    'susp-nieta':   'nieta'
+  };
+  Object.entries(suspMap).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', () => investigateSuspect(key));
+  });
+
+  // Sospechosos back → Inv board
+  document.getElementById('btn-susp-back').addEventListener('click', () => {
+    showScreen('screen-investigacion', () => showCounter());
+  });
+
+  // Detail continue
+  document.getElementById('btn-detail-continue').addEventListener('click', () => {
+    if (state.actionsLeft <= 0) {
+      setupAccusation();
+    } else {
+      showScreen(state.fromScreen, () => showCounter());
+    }
+  });
+
+  // Detail back → hub
+  document.getElementById('btn-detail-back').addEventListener('click', () => {
+    showScreen('screen-hub', () => showCounter());
+  });
+
+  // Confirm accusation
+  document.getElementById('btn-confirm-accuse').addEventListener('click', confirmAccusation);
+
+  // Wrong suspect → Wrong weapon
+  document.getElementById('btn-wrong-susp-next').addEventListener('click', () => {
+    const wpnImg = WEAPON_IMGS[state.selectedWeapon];
+    document.getElementById('bg-wrong-weapon').src = wpnImg;
+    showScreen('screen-wrong-weapon');
+  });
+
+  // Wrong weapon → Wrong room
+  document.getElementById('btn-wrong-wpn-next').addEventListener('click', () => {
+    const roomImg = ROOM_IMGS[state.selectedRoom];
+    document.getElementById('bg-wrong-room').src = roomImg;
+    showScreen('screen-wrong-room');
+  });
+
+  // Wrong room → next step (hub with 5 new actions OR has_perdido)
+  document.getElementById('btn-wrong-room-next').addEventListener('click', () => {
+    if (state.round === 1) {
+      // Give 5 more actions for round 2
+      state.round = 2;
+      state.actionsLeft = 5;
+      state.selectedSuspect = null;
+      state.selectedWeapon  = null;
+      state.selectedRoom    = null;
+      showScreen('screen-hub', () => showCounter());
+    } else {
+      // Lost
+      document.getElementById('bg-result').src = '011_has_perdido.png';
+      hideCounter();
+      showScreen('screen-result');
+    }
+  });
+
+  // Result → restart
+  document.getElementById('btn-result-restart').addEventListener('click', () => {
+    initGame();
+  });
+
+  // Start
+  initGame();
+});
+
+// ═══════════════════════════════════════════════════════
+// RAIN EFFECT
+// ═══════════════════════════════════════════════════════
+
+(function rainEffect() {
+  const canvas = document.getElementById('rain-canvas');
+  const ctx = canvas.getContext('2d');
+  let drops = [];
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    drops = Array.from({length: 120}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      speed: 8 + Math.random() * 8,
+      length: 15 + Math.random() * 20,
+      opacity: 0.3 + Math.random() * 0.5
+    }));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drops.forEach(d => {
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x - 1, d.y + d.length);
+      ctx.strokeStyle = `rgba(180,200,220,${d.opacity})`;
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
+      d.y += d.speed;
+      if (d.y > canvas.height) {
+        d.y = -d.length;
+        d.x = Math.random() * canvas.width;
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+</script>
+</body>
+</html>
